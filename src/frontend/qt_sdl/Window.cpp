@@ -54,7 +54,7 @@
 #include "PathSettingsDialog.h"
 #include "MPSettingsDialog.h"
 #include "WifiSettingsDialog.h"
-#include "IR/IRSettingsDialog.h"
+#include "IRSettingsDialog.h"
 #include "InterfaceSettingsDialog.h"
 #include "ROMInfoDialog.h"
 #include "RAMInfoDialog.h"
