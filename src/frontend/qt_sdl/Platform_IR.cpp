@@ -410,7 +410,7 @@ bool IRSerial()
 
 void IRSerialClosePort()
 {
-    if (Serial)
+    if (Serial) 
     {
         if (Serial->isOpen()) Serial->close();
         printf("Serial port closed\n");
@@ -464,26 +464,24 @@ void IRSerialOpenPort(void* userdata)
     return;
 }
 
-int IRSendDelayMs(void* userdata)
-{
-    EmuInstance* inst = (EmuInstance*)userdata;
-    return inst->getLocalConfig().GetInt("IR.Serial.SendDelayMs");
-}
-
-int IRReadTimeoutMs(void* userdata)
-{
-    EmuInstance* inst = (EmuInstance*)userdata;
-    return inst->getLocalConfig().GetInt("IR.Serial.ReadTimeoutMs");
-}
-
 u8 IRSendPacketSerial(char* data, int len, void* userdata)
 {
     QCoreApplication::processEvents();
     IRSerialOpenPort(userdata);
 
-    if (!Serial || !Serial->isOpen()) return 0;
+    if (!Serial || !Serial->isOpen()) 
+    {
+        Log(LogLevel::Error, "Serial write failed: port not open\n");
+        return 0;
+    }
 
     qint64 bytesWritten = Serial->write(data, len);
+
+    if (bytesWritten < 0)
+    {
+        Log(LogLevel::Error, "Serial write error: %s\n", Serial->errorString().toUtf8().constData());
+        return 0;
+    }
 
     Serial->flush();
 
@@ -492,14 +490,21 @@ u8 IRSendPacketSerial(char* data, int len, void* userdata)
     return static_cast<u8>(bytesWritten);
 }
 
-u8 IRReceivePacketSerial(char* data, int len, void* userdata)
+u8 IRReceivePacketSerial(char* data, int len,void* userdata)
 {
     QCoreApplication::processEvents();
     IRSerialOpenPort(userdata);
 
+
     if (!Serial || !Serial->isOpen() || !Serial->bytesAvailable()) return 0;
 
     qint64 bytesRead = Serial->read(data, len);
+
+    if (bytesRead < 0)
+    {
+        Log(LogLevel::Error, "Serial read error: %s\n", Serial->errorString().toUtf8().constData());
+        return 0;
+    }
 
     Log(LogLevel::Info, "Serial Read %d bytes: %s\n", bytesRead, IRBytesToString(data, bytesRead).c_str());
 
@@ -540,6 +545,7 @@ u8 IRReceivePacket(char* data, int len, void* userdata)
 
     int instanceID = inst->getInstanceID();
     if (instanceID > 0) irMode = IR_Local;
+
 
     if (irMode != IR_Serial) IRSerialClosePort();
     if (irMode != IR_TCP) IRSocketClose();

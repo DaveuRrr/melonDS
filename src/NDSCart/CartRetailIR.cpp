@@ -133,40 +133,14 @@ u8 CartRetailIR::SPITransmitReceive(u8 val)
 
 u8 CartRetailIR::ReadIR()
 {
-    int readTimeoutMs = Platform::IRReadTimeoutMs(UserData);
-    if (readTimeoutMs > 0)
-    {
-        u8 pointer = 0;
-        int len = Platform::IRReceivePacket(RxBuf, sizeof(RxBuf), UserData);
-        if (len > 0)
-        {
-            pointer = (u8)len;
-            long long lastRxTime = Platform::GetUSCount();
-            while ((Platform::GetUSCount() - lastRxTime) < readTimeoutMs)
-            {
-                len = Platform::IRReceivePacket(RxBuf + pointer, sizeof(RxBuf) - pointer, UserData);
-                if (len > 0)
-                {
-                    pointer += (u8)len;
-                    lastRxTime = Platform::GetUSCount();
-                }
-            }
-            Log(LogLevel::Info, "ReadIR accumulated: %d bytes\n", pointer);
-        }
-        return pointer;
-    }
-    else
-    {
-        memset(RxBuf, 0, sizeof(RxBuf));
-        return Platform::IRReceivePacket(RxBuf, sizeof(RxBuf), UserData);
-    }
-
+    memset(RxBuf, 0, sizeof(RxBuf));
+    return Platform::IRReceivePacket(RxBuf, sizeof(RxBuf), UserData);
 }
 
 u8 CartRetailIR::SendIR(u8 len)
 {
     // This packet needs to WAIT or else it will be piggybacked onto the latest packet (on the pokewalker's end)
-    if ((u8)TxBuf[0] == 0x5E) Platform::Sleep(10000);
+    if ((u8)TxBuf[0] == 0x5E) Platform::Sleep(10000); 
     return Platform::IRSendPacket(TxBuf, len, UserData);
 }
 

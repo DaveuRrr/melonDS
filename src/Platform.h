@@ -493,16 +493,6 @@ u8 IRReceivePacket(char* data, int len, void* userdata);
  */
 void IRClose();
 
-/**
- * Send DelayMs
- */
-int IRSendDelayMs(void* userdata);
-
-/**
- * Read Timeout Ms
- */
-int IRReadTimeoutMs(void* userdata);
-
 }
 }
 
