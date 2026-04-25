@@ -74,6 +74,10 @@ IRSettingsDialog::IRSettingsDialog(QWidget* parent) : QDialog(parent), ui(new Ui
     // if (IRMode == 2 || IRMode == 3) ui->groupBoxNetwork->setEnabled(true); 
 
     ui->txtSerialPath->setText(cfg.GetQString("IR.SerialPortPath"));
+    int readTimeout = cfg.GetInt("IR.Serial.ReadTimeoutMs");
+    int sendDelay = cfg.GetInt("IR.Serial.SendDelayMs");
+    ui->boxReadTimeoutMs->setValue(readTimeout); // 500
+    ui->boxSendDelayMs->setValue(sendDelay); // 2
     // ui->txtEepromFile->setText(cfg.GetQString("IR.EEPROMPath"));
     //ui->textSerialPath->text());
 
@@ -184,6 +188,8 @@ void IRSettingsDialog::done(int r)
 
         cfg.SetInt("IR.Mode", IRMode);
         cfg.SetQString("IR.SerialPortPath", ui->txtSerialPath->text());
+        cfg.SetInt("IR.Serial.ReadTimeoutMs", ui->boxReadTimeoutMs->value());
+        cfg.SetInt("IR.Serial.SendDelayMs", ui->boxSendDelayMs->value());
 
         // cfg.SetQString("IR.EEPROMPath", ui->txtEepromFile->text());
 
