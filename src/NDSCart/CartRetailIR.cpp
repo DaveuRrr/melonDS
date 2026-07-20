@@ -146,8 +146,8 @@ u8 CartRetailIR::ReadIR()
             len = Platform::IRReceivePacket(RxBuf + pointer, sizeof(RxBuf) - pointer, UserData);
             if (len > 0)
             {
-                 pointer += len;
-                 lastRxTime = Platform::GetUSCount();
+                pointer += len;
+                lastRxTime = Platform::GetUSCount();
             }
         }
         return pointer;

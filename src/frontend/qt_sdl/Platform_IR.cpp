@@ -475,7 +475,12 @@ u8 IRSendPacketSerial(char* data, int len, void* userdata)
 
     Serial->flush();
 
-    Log(LogLevel::Info, "Serial Write %d bytes: %s\n", bytesWritten, IRBytesToString(data, len).c_str());
+    static long long lastSerialTxTime = 0;
+    long long now = Platform::GetUSCount();
+    long long delta = lastSerialTxTime ? (now - lastSerialTxTime) : 0;
+    lastSerialTxTime = now;
+
+    Log(LogLevel::Info, "Serial Write %d bytes [t=%lld us, +%lld us]: %s\n", bytesWritten, now, delta, IRBytesToString(data, len).c_str());
 
     return static_cast<u8>(bytesWritten);
 }
@@ -487,11 +492,15 @@ u8 IRReceivePacketSerial(char* data, int len, void* userdata)
 
     if (!Serial || !Serial->isOpen() || !Serial->bytesAvailable()) return 0;
 
-
     int bytesRead = Serial->read(data, len);
-
-    Log(LogLevel::Info, "Serial Read %d bytes: %s\n", bytesRead, IRBytesToString(data, bytesRead).c_str());
     
+    static long long lastSerialRxTime = 0;
+    long long now = Platform::GetUSCount();
+    long long delta = lastSerialRxTime ? (now - lastSerialRxTime) : 0;
+    lastSerialRxTime = now;
+
+    Log(LogLevel::Info, "Serial Read %d bytes [t=%lld us, +%lld us]: %s\n", bytesRead, now, delta, IRBytesToString(data, bytesRead).c_str());
+
     return static_cast<u8>(bytesRead);
 }
 
