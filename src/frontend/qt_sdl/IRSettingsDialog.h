@@ -61,7 +61,6 @@ public:
 
 private slots:
     void done(int r);
-    void toggleCompatSettings(bool checked);
     void toggleSerialSettings(bool checked);
     void toggleNetworkSettings(bool checked);
     // void toggleDirectSettings(bool checked);

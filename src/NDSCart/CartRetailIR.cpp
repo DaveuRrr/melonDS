@@ -114,7 +114,7 @@ u8 CartRetailIR::SPITransmitReceive(u8 val)
 
     case 0x01: // Read from IR
         if (IRPos == 1) ret = ReadIR();
-        else ret = (unsigned char)RxBuf[IRPos - 2]; // We start returning actual packet data to the game now
+        else ret = (u8)RxBuf[IRPos - 2]; // We start returning actual packet data to the game now
         break;
 
     case 0x02: // Write to IR
@@ -135,14 +135,14 @@ u8 CartRetailIR::ReadIR()
 {
     memset(RxBuf, 0, sizeof(RxBuf));
 
-    int readTimeoutUs = Platform::IRReadTimeOutUs(UserData);
+    u32 readTimeoutUs = Platform::IRReadTimeOutUs(UserData);
     if (readTimeoutUs > 0)
     {
-        int len = Platform::IRReceivePacket(RxBuf, sizeof(RxBuf), UserData);
-        if (len <= 0) return 0; 
+        u8 len = Platform::IRReceivePacket(RxBuf, sizeof(RxBuf), UserData);
+        if (len <= 0) return 0;
 
         u8 pointer = len;
-        long long lastRxTime = Platform::GetUSCount();
+        u64 lastRxTime = Platform::GetUSCount();
         while ((Platform::GetUSCount() - lastRxTime) < readTimeoutUs)
         {
             len = Platform::IRReceivePacket(RxBuf + pointer, sizeof(RxBuf) - pointer, UserData);
@@ -159,8 +159,8 @@ u8 CartRetailIR::ReadIR()
 }
 
 u8 CartRetailIR::SendIR(u8 len)
-{   
-    int sendDelayUs = Platform::IRSendDelayUs(UserData);
+{
+    u32 sendDelayUs = Platform::IRSendDelayUs(UserData);
     if (sendDelayUs > 0) Platform::Sleep(sendDelayUs);
     // This packet needs to WAIT or else it will be piggybacked onto the latest packet (on the pokewalker's end)
     if ((u8)TxBuf[0] == 0x5E) Platform::Sleep(10000);

@@ -1,3 +1,21 @@
+/*
+    Copyright 2016-2026 melonDS team
+
+    This file is part of melonDS.
+
+    melonDS is free software: you can redistribute it and/or modify it under
+    the terms of the GNU General Public License as published by the Free
+    Software Foundation, either version 3 of the License, or (at your option)
+    any later version.
+
+    melonDS is distributed in the hope that it will be useful, but WITHOUT ANY
+    WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+    FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License along
+    with melonDS. If not, see http://www.gnu.org/licenses/.
+*/
+
 #include <stdio.h>
 #include <string.h>
 #include <QTcpServer>
@@ -26,13 +44,14 @@ QMutex NetworkMutex;
 ENetHost* Host = nullptr;
 ENetPeer* Peer = nullptr;
 std::queue<ENetPacket*> RxQueue;
-bool enetInited = false;
+bool ENetInited = false;
 
-struct IRLocalQueue {
+struct IRLocalQueue
+{
     std::queue<std::vector<u8>> Queue;
     QMutex Mutex;
-};
-static IRLocalQueue irLocalQueues[2];
+}; 
+static IRLocalQueue IRLocalQueues[2];
 
 enum IRMode
 {
@@ -62,8 +81,8 @@ u8 IRSendPacketLocal(char* data, int len, void* userdata)
 
     if (destID < 0 || destID > 1) return 0;
 
-    QMutexLocker locker(&irLocalQueues[destID].Mutex);
-    irLocalQueues[destID].Queue.push(std::vector<u8>((u8*)data, (u8*)data + len));
+    QMutexLocker locker(&IRLocalQueues[destID].Mutex);
+    IRLocalQueues[destID].Queue.push(std::vector<u8>((u8*)data, (u8*)data + len));
 
     Log(LogLevel::Info, "ID %d Local Write %d bytes: %s\n", instanceID, len, IRBytesToString(data, len).c_str());
     return static_cast<u8>(len);
@@ -76,13 +95,13 @@ u8 IRReceivePacketLocal(char* data, int len, void* userdata)
 
     if (instanceID < 0 || instanceID > 1) return 0;
 
-    QMutexLocker locker(&irLocalQueues[instanceID].Mutex);
-    if (irLocalQueues[instanceID].Queue.empty()) return 0;
+    QMutexLocker locker(&IRLocalQueues[instanceID].Mutex);
+    if (IRLocalQueues[instanceID].Queue.empty()) return 0;
 
-    auto& packet = irLocalQueues[instanceID].Queue.front();
+    auto& packet = IRLocalQueues[instanceID].Queue.front();
     int bytesRead = std::min((int)packet.size(), len);
     memcpy(data, packet.data(), bytesRead);
-    irLocalQueues[instanceID].Queue.pop();
+    IRLocalQueues[instanceID].Queue.pop();
 
     Log(LogLevel::Info, "ID %d Local Read %d bytes: %s\n", instanceID, bytesRead, IRBytesToString(data, len).c_str());
     return static_cast<u8>(bytesRead);
@@ -93,11 +112,11 @@ u8 IRReceivePacketLocal(char* data, int len, void* userdata)
 ******************************************************************************/
 void IRENetInit()
 {
-    if (enetInited) return;
+    if (ENetInited) return;
 
     if (MPInterface::GetType() == MPInterface_LAN)
     {
-        enetInited = true;
+        ENetInited = true;
         Log(LogLevel::Info, "ENet already initialized by LAN\n");
         return;
     }
@@ -108,13 +127,13 @@ void IRENetInit()
         return;
     }
 
-    enetInited = true;
+    ENetInited = true;
     Log(LogLevel::Info, "ENet initialized\n");
 }
 
 void IRENetDeinit()
 {
-    if (!enetInited) return;
+    if (!ENetInited) return;
 
     if (Peer)
     {
@@ -138,7 +157,7 @@ void IRENetDeinit()
     {
         enet_deinitialize();
         Log(LogLevel::Info, "ENet deinitialized\n");
-        enetInited = false;
+        ENetInited = false;
     }
 }
 
@@ -261,7 +280,7 @@ u8 IRReceivePacketENet(char* data, int len, void* userdata)
     ENetPacket* packet = RxQueue.front();
     RxQueue.pop();
 
-    int bytesRead = (packet->dataLength < (size_t)len) ? packet->dataLength : len;
+    u32 bytesRead = (packet->dataLength < (size_t)len) ? packet->dataLength : len;
     memcpy(data, packet->data, bytesRead);
 
     Log(LogLevel::Info, "UDP Read %d bytes: %s\n", bytesRead, IRBytesToString(data, bytesRead).c_str());
@@ -344,7 +363,6 @@ void IRSocketOpen(void* userdata)
             Log(LogLevel::Info, "TCP client connecting to %s:%d\n", hostIP.toUtf8().constData(), hostPort);
 
             if (Sock->waitForConnected(10)) Log(LogLevel::Info, "Connected to %s:%d\n", hostIP.toUtf8().constData(), hostPort);
-
         }
         else if (Sock->state() != QAbstractSocket::ConnectedState)
         {
@@ -379,7 +397,7 @@ u8 IRReceivePacketTCP(char* data, int len, void* userdata)
 
     QMutexLocker locker(&NetworkMutex);
 
-    if (!Sock || Sock->bytesAvailable() <= 0) return 0;
+    if (!Sock || Sock->state() != QAbstractSocket::ConnectedState || Sock->bytesAvailable() <= 0) return 0;
 
     qint64 bytesRead = Sock->read(data, len);
 
@@ -413,7 +431,7 @@ void IRSerialClosePort()
     if (Serial)
     {
         if (Serial->isOpen()) Serial->close();
-        printf("Serial port closed\n");
+        Log(LogLevel::Info, "Serial port closed\n");
         delete Serial;
         Serial = nullptr;
     }
@@ -441,11 +459,12 @@ void IRSerialOpenPort(void* userdata)
         Serial->setPortName(portPath);
         Log(LogLevel::Info, "Attempting to open Serial port: %s\n", portPath.toUtf8().constData());
 
-        if (!Serial->open(QIODevice::ReadWrite)) 
-        {   
+        if (!Serial->open(QIODevice::ReadWrite))
+        {
             Log(LogLevel::Error, "Failed to open Serial port %s: %s\n", portPath.toUtf8().constData(), Serial->errorString().toUtf8().constData());
         }
-        else {
+        else
+        {
             // Configure port settings AFTER opening
             Serial->setBaudRate(QSerialPort::Baud115200);
             Serial->setDataBits(QSerialPort::Data8);
@@ -460,8 +479,6 @@ void IRSerialOpenPort(void* userdata)
             Log(LogLevel::Info, "Serial port opened successfully: %s (115200 8N1, DTR=1, RTS=0)\n", portPath.toUtf8().constData());
         }
     }
-    
-    return;
 }
 
 u8 IRSendPacketSerial(char* data, int len, void* userdata)
@@ -471,16 +488,16 @@ u8 IRSendPacketSerial(char* data, int len, void* userdata)
 
     if (!Serial || !Serial->isOpen()) return 0;
 
-    int bytesWritten = Serial->write(data, len);
+    qint64 bytesWritten = Serial->write(data, len);
 
     Serial->flush();
 
-    static long long lastSerialTxTime = 0;
-    long long now = Platform::GetUSCount();
-    long long delta = lastSerialTxTime ? (now - lastSerialTxTime) : 0;
+    static u64 lastSerialTxTime = 0;
+    u64 now = Platform::GetUSCount();
+    u64 delta = lastSerialTxTime ? (now - lastSerialTxTime) : 0;
     lastSerialTxTime = now;
 
-    Log(LogLevel::Info, "Serial Write %d bytes [t=%lld us, +%lld us]: %s\n", bytesWritten, now, delta, IRBytesToString(data, len).c_str());
+    Log(LogLevel::Info, "Serial Write %d bytes [t=%llu us, +%llu us]: %s\n", bytesWritten, now, delta, IRBytesToString(data, len).c_str());
 
     return static_cast<u8>(bytesWritten);
 }
@@ -492,14 +509,14 @@ u8 IRReceivePacketSerial(char* data, int len, void* userdata)
 
     if (!Serial || !Serial->isOpen() || !Serial->bytesAvailable()) return 0;
 
-    int bytesRead = Serial->read(data, len);
+    qint64 bytesRead = Serial->read(data, len);
     
-    static long long lastSerialRxTime = 0;
-    long long now = Platform::GetUSCount();
-    long long delta = lastSerialRxTime ? (now - lastSerialRxTime) : 0;
+    static u64 lastSerialRxTime = 0;
+    u64 now = Platform::GetUSCount();
+    u64 delta = lastSerialRxTime ? (now - lastSerialRxTime) : 0;
     lastSerialRxTime = now;
 
-    Log(LogLevel::Info, "Serial Read %d bytes [t=%lld us, +%lld us]: %s\n", bytesRead, now, delta, IRBytesToString(data, bytesRead).c_str());
+    Log(LogLevel::Info, "Serial Read %d bytes [t=%llu us, +%llu us]: %s\n", bytesRead, now, delta, IRBytesToString(data, bytesRead).c_str());
 
     return static_cast<u8>(bytesRead);
 }
@@ -520,7 +537,7 @@ u8 IRSendPacket(char* data, int len, void* userdata)
     if (irMode != IR_TCP) IRSocketClose();
     if (irMode != IR_ENET) IRENetDeinit();
 
-    switch(irMode)
+    switch (irMode)
     {
         case IR_Local: return IRSendPacketLocal(data, len, userdata);
         case IR_Serial: return IRSendPacketSerial(data, len, userdata);
@@ -543,7 +560,7 @@ u8 IRReceivePacket(char* data, int len, void* userdata)
     if (irMode != IR_TCP) IRSocketClose();
     if (irMode != IR_ENET) IRENetDeinit();
 
-    switch(irMode)
+    switch (irMode)
     {
         case IR_Local: return IRReceivePacketLocal(data, len, userdata);
         case IR_Serial: return IRReceivePacketSerial(data, len, userdata);

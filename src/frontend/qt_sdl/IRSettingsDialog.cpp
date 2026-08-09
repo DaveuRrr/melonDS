@@ -1,5 +1,5 @@
 /*
-    Copyright 2016-2024 melonDS team
+    Copyright 2016-2026 melonDS team
 
     This file is part of melonDS.
 
@@ -14,8 +14,6 @@
 
     You should have received a copy of the GNU General Public License along
     with melonDS. If not, see http://www.gnu.org/licenses/.
-
-    @BarretKlics
 */
 
 #include <stdio.h>
@@ -44,42 +42,30 @@ IRSettingsDialog::IRSettingsDialog(QWidget* parent) : QDialog(parent), ui(new Ui
     ui->setupUi(this);
     setAttribute(Qt::WA_DeleteOnClose);
 
-
-    //I am not a front end dev sorry about this :)
     emuInstance = ((MainWindow*)parent)->getEmuInstance();
     auto& cfg = emuInstance->getLocalConfig();
 
-
     IRMode = cfg.GetInt("IR.Mode");
 
-    connect(ui->rbCompat, &QRadioButton::toggled, this, &IRSettingsDialog::toggleCompatSettings);
     connect(ui->rbSerial, &QRadioButton::toggled, this, &IRSettingsDialog::toggleSerialSettings);
     connect(ui->rbTCP, &QRadioButton::toggled, this, &IRSettingsDialog::toggleNetworkSettings);
     connect(ui->rbENet, &QRadioButton::toggled, this, &IRSettingsDialog::toggleNetworkSettings);
-
-
     connect(ui->rb_NetworkServer, &QRadioButton::toggled, this, &IRSettingsDialog::toggleNetworkServer);
     connect(ui->rb_NetworkClient, &QRadioButton::toggled, this, &IRSettingsDialog::toggleNetworkClient);
-
 
     if (IRMode == 0) ui->rbCompat->setChecked(true);
     else if (IRMode == 1) ui->rbSerial->setChecked(true);
     else if (IRMode == 2) ui->rbTCP->setChecked(true);
     else if (IRMode == 3) ui->rbENet->setChecked(true);
-    // else if (IRMode == 4) ui->rbDirect->setChecked(true);
 
     ui->groupBoxSerial->setEnabled(false);
     ui->groupBoxNetwork->setEnabled(false);
-    // ui->groupBoxDirect->setEnabled(false);
-    // if (IRMode == 2 || IRMode == 3) ui->groupBoxNetwork->setEnabled(true); 
 
     ui->txtSerialPath->setText(cfg.GetQString("IR.SerialPortPath"));
     int readTimeout = cfg.GetInt("IR.Serial.ReadTimeoutUs");
     ui->boxReadTimeoutUs->setValue(readTimeout); // 500
     int sendDelay = cfg.GetInt("IR.Serial.SendDelayUs");
     ui->boxSendDelayUs->setValue(sendDelay);
-    // ui->txtEepromFile->setText(cfg.GetQString("IR.EEPROMPath"));
-    //ui->textSerialPath->text());
 
     // Load TCP settings
     ui->boxHostIP->setText(cfg.GetQString("IR.Network.HostIP"));
@@ -92,21 +78,13 @@ IRSettingsDialog::IRSettingsDialog(QWidget* parent) : QDialog(parent), ui(new Ui
     if (isServer) ui->rb_NetworkServer->setChecked(true);
     else ui->rb_NetworkClient->setChecked(true);
 
-    toggleCompatSettings(ui->rbCompat->isChecked());
     toggleSerialSettings(ui->rbSerial->isChecked());
     toggleNetworkSettings(ui->rbTCP->isChecked() || ui->rbENet->isChecked());
-    // toggleDirectSettings(ui->rbDirect->isChecked());
 
     ui->lblSelfIP->setText(QString("0.0.0.0"));
-    // ui->txtDevLog->setText(cfg.GetQString("IR.PacketLogFile"));
 
 }
 
-void IRSettingsDialog::toggleCompatSettings(bool checked)
-{
-    //ui->groupBoxSerial->setEnabled(checked);
-
-}
 void IRSettingsDialog::toggleSerialSettings(bool checked)
 {
     ui->groupBoxSerial->setEnabled(checked);
@@ -118,15 +96,6 @@ void IRSettingsDialog::toggleNetworkSettings(bool checked)
     ui->groupBoxNetwork->setEnabled(checked);
 }
 
-// void IRSettingsDialog::toggleDirectSettings(bool checked){
-
-//     ui->groupBoxDirect->setEnabled(checked);
-// }
-
-
-
-
-
 void IRSettingsDialog::toggleNetworkServer(bool checked)
 {
     //ui->groupBoxNetwork->setEnabled(checked);
@@ -134,16 +103,12 @@ void IRSettingsDialog::toggleNetworkServer(bool checked)
 
 void IRSettingsDialog::toggleNetworkClient(bool checked)
 {
-
     //ui->groupBoxDirect->setEnabled(checked);
 }
 
 void IRSettingsDialog::on_EepromBrowse_clicked()
 {
-    QString file = QFileDialog::getOpenFileName(this,
-                                                "Select pokewalker EEPROM file",
-                                                "",
-                                                "bin files (*.bin);;Any file (*.*)");
+    QString file = QFileDialog::getOpenFileName(this, "Select pokewalker EEPROM file", "", "bin files (*.bin);;Any file (*.*)");
 
     if (file.isEmpty()) return;
 
@@ -152,9 +117,6 @@ void IRSettingsDialog::on_EepromBrowse_clicked()
         QMessageBox::critical(this, "melonDS", "Unable to write to EEPROM file.\nPlease check file/folder write permissions.");
         return;
     }
-
-
-    // ui->txtEepromFile->setText(file);
 }
 
 IRSettingsDialog::~IRSettingsDialog()
@@ -176,13 +138,10 @@ void IRSettingsDialog::done(int r)
     if (r == QDialog::Accepted)
     {
 
-        if (ui->rbCompat->isChecked() == true) IRMode = 0;
-        if (ui->rbSerial->isChecked() == true) IRMode = 1;
-        if (ui->rbTCP->isChecked() == true) IRMode = 2;
-        if (ui->rbENet->isChecked() == true) IRMode = 3;
-        // if (ui->rbDirect->isChecked() == true) IRMode = 4;
-        //printf("IrMode: %d\n", IRMode);
-
+        if (ui->rbCompat->isChecked()) IRMode = 0;
+        if (ui->rbSerial->isChecked()) IRMode = 1;
+        if (ui->rbTCP->isChecked()) IRMode = 2;
+        if (ui->rbENet->isChecked()) IRMode = 3;
 
         auto& cfg = emuInstance->getLocalConfig();
 
@@ -190,8 +149,6 @@ void IRSettingsDialog::done(int r)
         cfg.SetQString("IR.SerialPortPath", ui->txtSerialPath->text());
         cfg.SetInt("IR.Serial.ReadTimeoutUs", ui->boxReadTimeoutUs->value());
         cfg.SetInt("IR.Serial.SendDelayUs", ui->boxSendDelayUs->value());
-
-        // cfg.SetQString("IR.EEPROMPath", ui->txtEepromFile->text());
 
         // Save TCP settings
         cfg.SetQString("IR.Network.HostIP", ui->boxHostIP->text());
